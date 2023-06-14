@@ -120,8 +120,10 @@
             @click="select(t)"
             :class="{
               'border-4': selectedTicker === t,
+              'bg-white': !incorrectTickers.includes(t.name),
+              'bg-red-100': incorrectTickers.includes(t.name),
             }"
-            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+            class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">
@@ -199,7 +201,11 @@
 </template>
 
 <script>
-import { subscribeToTickers, unsubscribeFromTickers } from "./api";
+import {
+  subscribeToTickers,
+  unsubscribeFromTickers,
+  // incorrectTickerIs,
+} from "./api";
 // import { loadTickers } from "./api";
 export default {
   name: "App",
@@ -214,6 +220,7 @@ export default {
       similarVariants: [],
       page: 1,
       filter: "",
+      incorrectTickers: [],
     };
   },
   created: function () {
@@ -229,12 +236,13 @@ export default {
     const tickersData = localStorage.getItem("cryptonomicon-list");
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
-      this.tickers.forEach((ticker) =>
+      this.tickers.forEach((ticker) => {
         subscribeToTickers(ticker.name, (newPrice) =>
           this.updateTicker(ticker.name, newPrice)
-        )
-      );
+        );
+      });
     }
+    window.addEventListener("socket error", this.WebSocketErrorProcessing);
     setInterval(this.updateTickers, 5000);
   },
   mounted: async function () {
@@ -286,6 +294,9 @@ export default {
     },
   },
   methods: {
+    WebSocketErrorProcessing(event) {
+      this.incorrectTickers.push(event.detail);
+    },
     updateTicker(tickerName, price) {
       this.tickers
         .filter((t) => t.name === tickerName)
@@ -344,6 +355,12 @@ export default {
         subscribeToTickers(currentTicker.name, (newPrice) =>
           this.updateTicker(currentTicker.name, newPrice)
         );
+        // let incorrect = incorrectTickerIs();
+        // if (incorrect === currentTicker.name.toUpperCase()) {
+        //   this.tickerIsСorrect = false;
+        // } else {
+        //   this.tickerIsСorrect = true;
+        // }
       }
     },
 

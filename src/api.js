@@ -5,9 +5,20 @@ const socket = new WebSocket(
   `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
 );
 const AGGREGATE_INDEX = "5";
+let incorrectTicker;
 socket.addEventListener("message", (e) => {
-  const { TYPE: type, FROMSYMBOL: currency, PRICE: price } = JSON.parse(e.data);
-  if (type !== AGGREGATE_INDEX || price === undefined) {
+  const {
+    TYPE: type,
+    FROMSYMBOL: currency,
+    PRICE: price,
+    MESSAGE: message,
+    PARAMETER: parameter,
+  } = JSON.parse(e.data);
+  if (message === "INVALID_SUB") {
+    window.dispatchEvent(
+      new CustomEvent("socket error", { detail: parameter.split("~")[2] })
+    );
+  } else if (type !== AGGREGATE_INDEX || price === undefined) {
     return;
   }
   const handlers = tickersHandlers.get(currency) ?? [];
@@ -15,6 +26,10 @@ socket.addEventListener("message", (e) => {
 });
 
 const tickersHandlers = new Map();
+
+// export function incorrectTickerIs() {
+//   return incorrectTicker;
+// }
 
 function sendToWS(message) {
   const stringifyedMessage = JSON.stringify(message);
@@ -56,4 +71,10 @@ export const unsubscribeFromTickers = (ticker) => {
   unsubscribeFromTickerOnWS(ticker);
 };
 
-window.tickers = tickersHandlers;
+window.incorrectTicker = incorrectTicker;
+//dz
+// 1. Подсветка красным некорректной валюты
+// попробовать реализовать генерацию ошибки при вводе неправильного тиккера
+// в файле .vue слушать через addEventListener эти ошибки и если будет такая поймана, то заменить класс на bg-red-100
+// 2. Поддержка кросс-преобразования валют
+// 3. Возможность работать в нескольких вкладках
