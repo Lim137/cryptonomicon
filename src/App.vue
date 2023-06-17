@@ -201,11 +201,7 @@
 </template>
 
 <script>
-import {
-  subscribeToTickers,
-  unsubscribeFromTickers,
-  // incorrectTickerIs,
-} from "./api";
+import * as api from "./api";
 // import { loadTickers } from "./api";
 export default {
   name: "App",
@@ -237,13 +233,12 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) => {
-        subscribeToTickers(ticker.name, (newPrice) =>
+        api.subscribeToTickers(ticker.name, (newPrice) =>
           this.updateTicker(ticker.name, newPrice)
         );
       });
     }
     window.addEventListener("socket error", this.WebSocketErrorProcessing);
-    setInterval(this.updateTickers, 5000);
   },
   mounted: async function () {
     const f = await fetch(
@@ -352,7 +347,7 @@ export default {
         );
 
         this.ticker = "";
-        subscribeToTickers(currentTicker.name, (newPrice) =>
+        api.subscribeToTickers(currentTicker.name, (newPrice) =>
           this.updateTicker(currentTicker.name, newPrice)
         );
         // let incorrect = incorrectTickerIs();
@@ -370,7 +365,7 @@ export default {
       if (this.selectedTicker === tickerToDel) {
         this.selectedTicker = null;
       }
-      unsubscribeFromTickers(tickerToDel.name);
+      api.unsubscribeFromTickers(tickerToDel.name);
     },
     isRepeat(tickerName) {
       const allTickersNames = this.tickers.map((t) => t.name);
