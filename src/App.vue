@@ -238,6 +238,27 @@ export default {
         );
       });
     }
+    const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
+    broadcastChannel.addEventListener("message", (event) => {
+      const { action } = event.data;
+      if (action === "changeTickers") {
+        const tickersData = localStorage.getItem("cryptonomicon-list");
+        if (tickersData) {
+          const originalTickers = this.tickers.map((ticker) => ticker.name);
+          this.tickers = JSON.parse(tickersData);
+          const addedTickers = this.tickers.filter(function (ticker) {
+            return !originalTickers.includes(ticker.name);
+          });
+          addedTickers.forEach((ticker) => {
+            api.subscribeToTickers(ticker.name, (newPrice) =>
+              this.updateTicker(ticker.name, newPrice)
+            );
+          });
+        } else {
+          this.tickers = [];
+        }
+      }
+    });
     window.addEventListener("socket error", this.WebSocketErrorProcessing);
   },
   mounted: async function () {
@@ -304,7 +325,7 @@ export default {
     },
     formatPrice(price) {
       if (typeof price === "number" && !isNaN(price)) {
-        return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+        return price > 1 ? price.toFixed(2) : price.toPrecision(5);
       } else {
         return price; // Возвращаем исходное значение price, если оно не является числом
       }
@@ -340,16 +361,14 @@ export default {
       if (this.repeat) {
         this.similarVariants = [this.ticker.toUpperCase()];
       } else {
-        this.tickers = [...this.tickers, currentTicker];
-        localStorage.setItem(
-          "cryptonomicon-list",
-          JSON.stringify(this.tickers)
-        );
-
+        this.selectedTicker = "";
+        const newTickers = [...this.tickers, currentTicker];
+        localStorage.setItem("cryptonomicon-list", JSON.stringify(newTickers));
         this.ticker = "";
-        api.subscribeToTickers(currentTicker.name, (newPrice) =>
-          this.updateTicker(currentTicker.name, newPrice)
-        );
+        const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
+        broadcastChannel.postMessage({
+          action: "changeTickers",
+        });
         // let incorrect = incorrectTickerIs();
         // if (incorrect === currentTicker.name.toUpperCase()) {
         //   this.tickerIsСorrect = false;
@@ -360,12 +379,20 @@ export default {
     },
 
     del(tickerToDel) {
-      this.tickers = this.tickers.filter((t) => t !== tickerToDel);
+      const tickersListWithoutTickerToDel = this.tickers.filter(
+        (t) => t !== tickerToDel
+      );
+      localStorage.setItem(
+        "cryptonomicon-list",
+        JSON.stringify(tickersListWithoutTickerToDel)
+      );
+      this.selectedTicker = null;
 
-      if (this.selectedTicker === tickerToDel) {
-        this.selectedTicker = null;
-      }
       api.unsubscribeFromTickers(tickerToDel.name);
+      const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
+      broadcastChannel.postMessage({
+        action: "changeTickers",
+      });
     },
     isRepeat(tickerName) {
       const allTickersNames = this.tickers.map((t) => t.name);
@@ -424,8 +451,12 @@ export default {
       this.add();
     },
     delAll() {
-      this.tickers = [];
-      localStorage.setItem("cryptonomicon-list", "");
+      localStorage.setItem("cryptonomicon-list", []);
+      this.selectedTicker = null;
+      const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
+      broadcastChannel.postMessage({
+        action: "changeTickers",
+      });
     },
   },
   watch: {
