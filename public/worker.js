@@ -15,7 +15,6 @@ self.addEventListener("connect", (e) => {
     sendToWS(message);
   };
   socket.onmessage = function (event) {
-    // port.postMessage(event.data);
     channel.postMessage(event.data);
   };
 });

@@ -42,8 +42,6 @@ channel.addEventListener("message", (e) => {
       ) {
         invalidTickers.push(currentTicker);
 
-        console.log(invalidTickers);
-
         window.dispatchEvent(
           new CustomEvent("socket error", { detail: parameter.split("~")[2] })
         );
@@ -80,9 +78,8 @@ channel.addEventListener("message", (e) => {
   }
   // обновление цены тиккеров, которые конвертируются в btc, согласно актуальной цене btc
   if (currency === "BTC") {
+    btcPrice = price;
     if (listTickersToBTC.length !== 0) {
-      btcPrice = price;
-
       listTickersToBTC.forEach((ticker) => {
         const newPriceToBTCTickers = ticker.price * btcPrice;
         const handlers = tickersHandlers.get(ticker.name) ?? [];
@@ -90,13 +87,15 @@ channel.addEventListener("message", (e) => {
       });
     }
   }
+  if (convertTo === "BTC" && btcPrice && price) {
+    price = price * btcPrice;
+  }
   const handlers = tickersHandlers.get(currency) ?? [];
-  //console.log(listTickersToBTC);
+
   handlers.forEach((fn) => fn(price));
 });
 
 const tickersHandlers = new Map();
-// console.log(Array.from(tickersHandlers.keys()));
 
 function subscribeToTickerOnWS(ticker) {
   worker.port.postMessage({
@@ -138,9 +137,3 @@ export const unsubscribeFromTickers = (ticker) => {
     }
   }
 };
-//dz
-// 1. Подсветка красным некорректной валюты
-// попробовать реализовать генерацию ошибки при вводе неправильного тиккера
-// в файле .vue слушать через addEventListener эти ошибки и если будет такая поймана, то заменить класс на bg-red-100
-// 2. Поддержка кросс-преобразования валют тиккер chash - СДЕЛАТЬ УКМНОЖЕНИЕ НА ЦЕНУ BTC (+); УБРАТЬ ЛИШНИЕ ПОДПИСКИ(ЕСЛИ ДОБАВИТЬ ТИККЕРЫ КОТОРЫХ НЕ СУЩЕСТВУЕТ ТАМ КАПЕЦ КАКОЙ-ТО ПРОИСХОДИТ В WEB SOCKET (+)); ПОПРОБОВАТЬ СДЕЛАТЬ СПИСОК ТИККЕРОВ, КОТОРЫЕ ПРИВОДЯТСЯ К BTC И ПРИ ОБНОВЛЕНИИ КУРСА BTC ОБНОВЛЯТЬ И ЭТИ ТИККЕРЫ (+)
-// 3. Возможность работать в нескольких вкладках

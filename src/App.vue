@@ -158,14 +158,18 @@
       </template>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name }} - USD
+          {{ selectedTicker ? selectedTicker.name + " - USD" : "" }}
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graph"
+        >
           <div
             v-for="(bar, i) in normalizedGraph"
+            ref="graphColumns"
             :key="i"
-            :style="{ height: `${bar}%` }"
-            class="bg-purple-800 border w-10 h-5"
+            :style="{ height: `${bar}%`, width: graphColumnWidth + 'px' }"
+            class="bg-purple-800 border h-5"
           ></div>
         </div>
         <button
@@ -217,6 +221,8 @@ export default {
       page: 1,
       filter: "",
       incorrectTickers: [],
+      maxGraphValues: 1,
+      graphColumnWidth: 38,
     };
   },
   created: function () {
@@ -262,6 +268,7 @@ export default {
     window.addEventListener("socket error", this.WebSocketErrorProcessing);
   },
   mounted: async function () {
+    window.addEventListener("resize", this.calculateMaxGraphValue);
     const f = await fetch(
       `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=2c577907db56aff8faf35b8da454d0084214d293246bb1f6200c7d600a8e882c`
     );
@@ -270,6 +277,10 @@ export default {
     this.dataCoinsList = Object.values(objCoinsList.Data).map(function (item) {
       return item.FullName;
     });
+  },
+  unmounted: function () {
+    window.removeEventListener("resize", this.calculateMaxGraphValue);
+    window.removeEventListener("socket error", this.WebSocketErrorProcessing);
   },
   computed: {
     startIndex() {
@@ -310,6 +321,20 @@ export default {
     },
   },
   methods: {
+    calculateMaxGraphValue() {
+      if (!this.$refs.graph) {
+        return;
+      }
+
+      this.maxGraphValues =
+        this.$refs.graph.clientWidth / this.graphColumnWidth;
+      this.removeExcessValuesFromStart();
+    },
+    removeExcessValuesFromStart() {
+      if (this.graph.length > this.maxGraphValues) {
+        this.graph.splice(0, this.graph.length - this.maxGraphValues);
+      }
+    },
     WebSocketErrorProcessing(event) {
       this.incorrectTickers.push(event.detail);
     },
@@ -320,6 +345,7 @@ export default {
           t.price = price;
           if (t === this.selectedTicker) {
             this.graph.push(price);
+            this.removeExcessValuesFromStart();
           }
         });
     },
@@ -335,17 +361,6 @@ export default {
       this.page = 1;
     },
 
-    // async updateTickers() {
-    //   if (!this.tickers.length) {
-    //     return;
-    //   }
-    //   const exchangeData = await loadTickers(this.tickers.map((t) => t.name));
-    //   this.tickers.forEach((ticker) => {
-    //     const price = exchangeData[ticker.name.toUpperCase()];
-
-    //     ticker.price = price ?? "-";
-    //   });
-    // },
     add() {
       if (!this.ticker) {
         return;
@@ -369,12 +384,6 @@ export default {
         broadcastChannel.postMessage({
           action: "changeTickers",
         });
-        // let incorrect = incorrectTickerIs();
-        // if (incorrect === currentTicker.name.toUpperCase()) {
-        //   this.tickerIsСorrect = false;
-        // } else {
-        //   this.tickerIsСorrect = true;
-        // }
       }
     },
 
@@ -445,6 +454,7 @@ export default {
 
     select(selectedElem) {
       this.selectedTicker = selectedElem;
+      this.graph.push(selectedElem.price);
     },
     autocompleteTicker(tickerName) {
       this.ticker = tickerName;
@@ -462,6 +472,9 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
+      this.$nextTick(() => {
+        this.calculateMaxGraphValue();
+      });
     },
     paginatedTickers() {
       if (this.paginatedTickers.length === 0 && this.page > 1) {
