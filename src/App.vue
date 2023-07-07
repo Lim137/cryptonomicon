@@ -27,65 +27,11 @@
     </div>
 
     <div class="container">
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label for="wallet" class="block text-sm font-medium text-gray-700"
-              >Тикер</label
-            >
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                v-model="ticker"
-                @keydown.enter="add"
-                @input="
-                  repeat = false;
-                  findMatchingVariants();
-                "
-                type="text"
-                name="wallet"
-                id="wallet"
-                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Например DOGE"
-              />
-            </div>
-            <div
-              class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
-            >
-              <button
-                v-for="(variant, idx) in similarVariants"
-                :key="idx"
-                @click="autocompleteTicker(variant)"
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                {{ variant }}
-              </button>
-            </div>
-            <div v-if="repeat" class="text-sm text-red-600">
-              Такой тикер уже добавлен
-            </div>
-          </div>
-        </div>
-        <button
-          @click="add()"
-          type="button"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <svg
-            class="-ml-0.5 mr-2 h-6 w-6"
-            xmlns="http://www.w3.org/2000/svg"
-            width="30"
-            height="30"
-            viewBox="0 0 24 24"
-            fill="#ffffff"
-          >
-            <path
-              d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
-      </section>
+      <add-ticker
+        @add-ticker="add"
+        :tickers="tickers"
+        :allVariants="dataCoinsList"
+      />
       <template v-if="!isEmptyTickersList">
         <hr class="w-full border-t border-gray-600 my-4" />
         <div>
@@ -156,76 +102,48 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section v-if="selectedTicker" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker ? selectedTicker.name + " - USD" : "" }}
-        </h3>
-        <div
-          class="flex items-end border-gray-600 border-b border-l h-64"
-          ref="graph"
-        >
-          <div
-            v-for="(bar, i) in normalizedGraph"
-            ref="graphColumns"
-            :key="i"
-            :style="{ height: `${bar}%`, width: graphColumnWidth + 'px' }"
-            class="bg-purple-800 border h-5"
-          ></div>
-        </div>
-        <button
-          @click="selectedTicker = 0"
-          type="button"
-          class="absolute top-0 right-0"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            xmlns:svgjs="http://svgjs.com/svgjs"
-            version="1.1"
-            width="30"
-            height="30"
-            x="0"
-            y="0"
-            viewBox="0 0 511.76 511.76"
-            style="enable-background: new 0 0 512 512"
-            xml:space="preserve"
-          >
-            <g>
-              <path
-                d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"
-                fill="#718096"
-                data-original="#000000"
-              ></path>
-            </g>
-          </svg>
-        </button>
-      </section>
+      <display-graph
+        :normalizedGraph="normalizedGraph"
+        :chosenTicker="selectedTicker"
+        @calculated-maxGraphValues="updateMaxGraphValues"
+        @close-graph="closeGraph"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import * as api from "./api";
-// import { loadTickers } from "./api";
+import AddTicker from "./components/AddTicker.vue";
+import DisplayGraph from "./components/DisplayGraph.vue";
+
 export default {
   name: "App",
+  components: {
+    AddTicker,
+    DisplayGraph,
+  },
   data() {
     return {
-      ticker: null,
-      repeat: false,
       tickers: [],
       selectedTicker: null,
       graph: [],
       dataCoinsList: null,
-      similarVariants: [],
       page: 1,
       filter: "",
       incorrectTickers: [],
       maxGraphValues: 1,
-      graphColumnWidth: 38,
     };
   },
-  created: function () {
+  created: async function () {
+    const f = await fetch(
+      `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=2c577907db56aff8faf35b8da454d0084214d293246bb1f6200c7d600a8e882c`
+    );
+    const objCoinsList = await f.json();
+
+    this.dataCoinsList = Object.values(objCoinsList.Data).map(function (item) {
+      return item.FullName;
+    });
     const windowData = Object.fromEntries(
       new URL(window.location).searchParams.entries()
     );
@@ -267,19 +185,7 @@ export default {
     });
     window.addEventListener("socket error", this.WebSocketErrorProcessing);
   },
-  mounted: async function () {
-    window.addEventListener("resize", this.calculateMaxGraphValue);
-    const f = await fetch(
-      `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=2c577907db56aff8faf35b8da454d0084214d293246bb1f6200c7d600a8e882c`
-    );
-    const objCoinsList = await f.json();
-
-    this.dataCoinsList = Object.values(objCoinsList.Data).map(function (item) {
-      return item.FullName;
-    });
-  },
   unmounted: function () {
-    window.removeEventListener("resize", this.calculateMaxGraphValue);
     window.removeEventListener("socket error", this.WebSocketErrorProcessing);
   },
   computed: {
@@ -321,13 +227,11 @@ export default {
     },
   },
   methods: {
-    calculateMaxGraphValue() {
-      if (!this.$refs.graph) {
-        return;
-      }
-
-      this.maxGraphValues =
-        this.$refs.graph.clientWidth / this.graphColumnWidth;
+    closeGraph() {
+      this.selectedTicker = null;
+    },
+    updateMaxGraphValues(value) {
+      this.maxGraphValues = value;
       this.removeExcessValuesFromStart();
     },
     removeExcessValuesFromStart() {
@@ -361,30 +265,21 @@ export default {
       this.page = 1;
     },
 
-    add() {
-      if (!this.ticker) {
-        return;
-      }
+    add(ticker) {
       const currentTicker = {
-        name: this.ticker.toUpperCase(),
+        name: ticker.toUpperCase(),
         price: "-",
       };
       this.filter = "";
       this.page = 1;
-      this.similarVariants = [];
-      this.isRepeat(this.ticker.toUpperCase());
-      if (this.repeat) {
-        this.similarVariants = [this.ticker.toUpperCase()];
-      } else {
-        this.selectedTicker = "";
-        const newTickers = [...this.tickers, currentTicker];
-        localStorage.setItem("cryptonomicon-list", JSON.stringify(newTickers));
-        this.ticker = "";
-        const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
-        broadcastChannel.postMessage({
-          action: "changeTickers",
-        });
-      }
+
+      this.selectedTicker = null;
+      const newTickers = [...this.tickers, currentTicker];
+      localStorage.setItem("cryptonomicon-list", JSON.stringify(newTickers));
+      const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
+      broadcastChannel.postMessage({
+        action: "changeTickers",
+      });
     },
 
     del(tickerToDel) {
@@ -403,63 +298,12 @@ export default {
         action: "changeTickers",
       });
     },
-    isRepeat(tickerName) {
-      const allTickersNames = this.tickers.map((t) => t.name);
-      this.repeat = allTickersNames.includes(tickerName);
-    },
-
-    findMatchingVariants() {
-      const inputText = this.ticker;
-      if (this.ticker === "") {
-        this.similarVariants = [];
-        return;
-      }
-      const allVariants = this.dataCoinsList;
-      const regex = /\((.*?)\)/; // Регулярное выражение для извлечения текста в скобках
-      const shortVariants = allVariants.map(
-        (variant) => variant.match(regex)[1]
-      ); // Получаем массив коротких записей
-
-      const matchingVariants = shortVariants.filter((variant) =>
-        variant.toLowerCase().includes(inputText.toLowerCase())
-      );
-
-      matchingVariants.sort(
-        (a, b) =>
-          this.countMatches(b.toLowerCase(), inputText.toLowerCase()) -
-          this.countMatches(a.toLowerCase(), inputText.toLowerCase())
-      );
-
-      let result = matchingVariants.slice(0, 4);
-
-      if (result.length < 4) {
-        const fullVariants = allVariants.filter((variant) =>
-          variant.toLowerCase().includes(inputText.toLowerCase())
-        );
-
-        const additionalVariants = fullVariants
-          .map((variant) => variant.match(regex)[1])
-          .filter((variant) => !result.includes(variant));
-
-        result = result.concat(additionalVariants.slice(0, 4 - result.length));
-      }
-
-      this.similarVariants = result;
-    },
-
-    countMatches(str, sub) {
-      const regex = new RegExp(sub, "g");
-      return (str.match(regex) || []).length;
-    },
 
     select(selectedElem) {
       this.selectedTicker = selectedElem;
       this.graph.push(selectedElem.price);
     },
-    autocompleteTicker(tickerName) {
-      this.ticker = tickerName;
-      this.add();
-    },
+
     delAll() {
       localStorage.setItem("cryptonomicon-list", []);
       this.selectedTicker = null;
@@ -472,9 +316,14 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
-      this.$nextTick(() => {
-        this.calculateMaxGraphValue();
-      });
+      // this.$nextTick(() => {
+      //   this.calculateMaxGraphValue();
+      // });
+    },
+    graph() {
+      if (this.graph.length > this.maxGraphValues) {
+        this.graph.splice(0, this.graph.length - this.maxGraphValues);
+      }
     },
     paginatedTickers() {
       if (this.paginatedTickers.length === 0 && this.page > 1) {

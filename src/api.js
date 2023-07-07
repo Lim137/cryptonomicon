@@ -1,5 +1,3 @@
-/* eslint-disable prettier/prettier */
-// import { sendToWS } from "./worker";
 const worker = new SharedWorker("./worker.js");
 const channel = new BroadcastChannel("websocket_channel");
 worker.port.start();
