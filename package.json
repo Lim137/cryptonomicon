@@ -30,4 +30,5 @@
     "prettier": "^2.4.1",
     "vue-cli-plugin-tailwind": "~3.0.0"
   }
+  
 }

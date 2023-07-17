@@ -165,6 +165,7 @@ export default {
     const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
     broadcastChannel.addEventListener("message", (event) => {
       const { action } = event.data;
+      this.selectedTicker = null;
       if (action === "changeTickers") {
         const tickersData = localStorage.getItem("cryptonomicon-list");
         if (tickersData) {
@@ -272,8 +273,6 @@ export default {
       };
       this.filter = "";
       this.page = 1;
-
-      this.selectedTicker = null;
       const newTickers = [...this.tickers, currentTicker];
       localStorage.setItem("cryptonomicon-list", JSON.stringify(newTickers));
       const broadcastChannel = new BroadcastChannel("reactivityBetweenTabs");
@@ -329,9 +328,6 @@ export default {
       if (this.paginatedTickers.length === 0 && this.page > 1) {
         this.page -= 1;
       }
-    },
-    tickers() {
-      localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
     },
     filter() {
       this.page = 1;
